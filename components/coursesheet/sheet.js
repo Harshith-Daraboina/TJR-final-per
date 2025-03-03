@@ -1,39 +1,50 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { 
+  ActivityIndicator, 
+  ScrollView, 
+  StyleSheet, 
+  Text, 
+  View, 
+  RefreshControl 
+} from 'react-native';
 import { supabase } from '../../supabaseConfig';
 
 const Sheet = ({ course }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [columns, setColumns] = useState([]);
 
-  useEffect(() => {
-    const fetchTableData = async () => {
-      if (!course) return;
+  const fetchTableData = async () => {
+    if (!course) return;
 
-      try {
-        console.log(`Fetching data from table: ${course}`);
-        
-        const { data: tableData, error } = await supabase
-          .from(course)
-          .select('*');
+    try {
+      console.log(`Fetching data from table: ${course}`);
+      setLoading(true);
 
-        if (error) throw error;
+      const { data: tableData, error } = await supabase.from(course).select('*');
+      if (error) throw error;
 
-        setData(tableData);
-
-        if (tableData && tableData.length > 0) {
-          setColumns(Object.keys(tableData[0]));
-        }
-      } catch (err) {
-        console.error('Error fetching table data:', err.message);
-      } finally {
-        setLoading(false);
+      setData(tableData);
+      if (tableData && tableData.length > 0) {
+        setColumns(Object.keys(tableData[0]));
       }
-    };
+    } catch (err) {
+      console.error('Error fetching table data:', err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTableData();
   }, [course]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchTableData();
+  }, []);
 
   if (loading) {
     return (
@@ -53,7 +64,10 @@ const Sheet = ({ course }) => {
   }
 
   return (
-    <ScrollView horizontal>
+    <ScrollView 
+      horizontal
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={styles.tableContainer}>
         {/* Table Header */}
         <View style={styles.tableHeader}>
@@ -122,7 +136,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   tableCell: {
-    width: 120, // Fixed width for uniformity
+    width: 120,
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderRightWidth: 1,
@@ -146,7 +160,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   dataContainer: {
-    maxHeight: 400, // Prevents excessive scrolling
+    maxHeight: 400,
   },
 });
 

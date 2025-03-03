@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Course from '../../components/profile/course';
 import Createcourse from '../../components/profile/createcourse';
+import Info from '../../components/profile/info';
 import { useUserIdentity } from '../../context/UserContext';
 
 export default function Profile() {
@@ -59,15 +60,7 @@ export default function Profile() {
 
           {/* Action Buttons */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.buttonText}>App Policies</Text>
-              <Feather name="chevron-right" size={20} color="#333" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.buttonText}>Team Talks!</Text>
-              <Feather name="chevron-right" size={20} color="#333" />
-            </TouchableOpacity>
+             <Info/>
           </View>
 
           {/* Logout Button */}

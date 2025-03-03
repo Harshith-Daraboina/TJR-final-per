@@ -10,26 +10,27 @@ import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../supabaseConfig';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Sheet from '../../components/coursesheet/sheet'; // Import Sheet component
-import Export from '../../components/coursesheet/export'; // Import Sheet component
+import Sheet from '../../components/coursesheet/sheet';
+import Export from '../../components/coursesheet/export';
 import { useUserIdentity } from '../../context/UserContext';
+import { useUser } from '@clerk/clerk-expo';
 
 export default function CourseDetails() {
-  const { id } = useLocalSearchParams(); // Course ID
+  const { id } = useLocalSearchParams(); 
   const [course, setCourse] = useState(null);
   const [completables, setCompletables] = useState([]);
   const [loading, setLoading] = useState(true);
   const { userIdentity } = useUserIdentity();
-  const [attendanceColumn, setAttendanceColumn] = useState(null); // Store the created column name for attendance
+  const [attendanceColumn, setAttendanceColumn] = useState(null); 
+  const { user, isLoaded } = useUser(); // Ensure user data is loaded before using it
+  const student_email = user?.email ? user.email.toLowerCase() : null; // Ensure lowercase email
 
-  const parmeters = `course_${id.replace(/-/g, '_')}`;
-
+  const tableName = `course_${id.replace(/-/g, '_')}`;
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
       if (!id) return;
       try {
-        // Fetch Course Details
         const { data: courseData, error: courseError } = await supabase
           .from('courses')
           .select('*')
@@ -39,13 +40,10 @@ export default function CourseDetails() {
         if (courseError) throw courseError;
         setCourse(courseData);
 
-        // Generate the dynamic table name and log it
-        const tableName = `course_${id.replace(/-/g, '_')}`;
-        console.log(`Attempting to fetch data from table: ${tableName}`);
+        console.log(`Fetching data from table: ${tableName}`);
         
-        // Fetch Completables for the Course
         const { data: completablesData, error: completablesError } = await supabase
-          .from(tableName) // Dynamic table
+          .from(tableName) 
           .select('*');
 
         if (completablesError) throw completablesError;
@@ -63,52 +61,125 @@ export default function CourseDetails() {
 
   const handleTakeAttendance = async () => {
     try {
-      // Generate a safe column name using current date and time
-      const currentDate = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '').replace(/:/g, '_'); // Safe date format
-      const columnName = `attendance_${currentDate}`; // Column name format
+      const currentDate = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '').replace(/:/g, '_'); 
+      const columnName = `attendance_${currentDate}`;
 
-      // Generate the dynamic table name
-      const tableName = `course_${id.replace(/-/g, '_')}`;
-      console.log(`Attempting to alter table: ${tableName} and add column: ${columnName}`);
+      console.log(`Attempting to alter table: ${tableName}, adding column: ${columnName}`);
 
-      // Call the Supabase function to alter the table by adding the new column
       const { error } = await supabase.rpc('execute_sql', {
-        query: `
-          ALTER TABLE "${tableName}"
-          ADD COLUMN IF NOT EXISTS "${columnName}" BOOLEAN DEFAULT FALSE;
-        `
+        query: `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS "${columnName}" BOOLEAN DEFAULT FALSE;`
       });
 
       if (error) throw error;
 
-      // Store the column name to update attendance later
       setAttendanceColumn(columnName);
-
-      console.log('Column added successfully:', columnName);
+      console.log('✅ Column added successfully:', columnName);
     } catch (error) {
-      console.error('Error taking attendance:', error.message);
+      console.error('❌ Error taking attendance:', error.message);
     }
   };
+  // .................................................................Markk Attendance.............................................//
 
   const handleMarkAttendance = async () => {
-    if (!attendanceColumn) return;
-
-    try {
-      // Mark attendance for the student by updating the row with 1 in the column for today's date
-      const { error } = await supabase
-        .from(`course_${id.replace(/-/g, '_')}`)
-        .update({ [`"${attendanceColumn}"`]: 1 })  // Mark as present
-        .eq('student_id', userIdentity.id);
-
-      if (error) throw error;
-
-      console.log('Attendance marked successfully!');
-    } catch (error) {
-      console.error('Error marking attendance:', error.message);
+  const student_email = user?.primaryEmailAddress?.emailAddress;
+  try {
+    if (!student_email) {
+      console.error("❌ Error: User email is undefined. Cannot mark attendance.");
+      return;
     }
-  };
 
-  if (loading) {
+    console.log(`📌 Checking attendance columns for table: ${tableName}`);
+
+    // 1️⃣ **Fetch attendance columns without relying on Supabase schema cache**
+    const { data: columnsData, error: columnError } = await supabase.rpc('get_columns', {
+      table_name: tableName
+    });
+
+    if (columnError) throw columnError;
+    if (!columnsData || columnsData.length === 0) {
+      console.error("❌ No columns found in table.");
+      return;
+    }
+
+    // 2️⃣ **Filter & sort attendance columns correctly**
+    const attendanceColumns = columnsData
+      .map(col => col.column_name)
+      .filter(name => name.startsWith('attendance_'));
+
+    if (attendanceColumns.length === 0) {
+      console.error("❌ No attendance columns found.");
+      return;
+    }
+
+    attendanceColumns.sort((a, b) => {
+      const getTimestamp = (colName) => {
+        const timestamp = colName.replace("attendance_", "");
+        const parsedTime = new Date(timestamp).getTime();
+        return isNaN(parsedTime) ? 0 : parsedTime;
+      };
+      return getTimestamp(a) - getTimestamp(b);
+    });
+
+    // 3️⃣ **Get the latest attendance column**
+    const lastAttendanceColumn = attendanceColumns[attendanceColumns.length - 1];
+    if (!lastAttendanceColumn) {
+      console.error("❌ No valid attendance column found.");
+      return;
+    }
+
+    console.log(`✅ Marking attendance in column: ${lastAttendanceColumn}`);
+
+    // 4️⃣ **Check if student exists**
+    const { data: studentData, error: studentError } = await supabase
+      .from(tableName)
+      .select('student_email')
+      .eq('student_email', student_email)
+      .maybeSingle();
+
+    if (studentError) throw studentError;
+    if (!studentData) {
+      console.warn("⚠️ No matching student record found. Attendance not updated.");
+      return;
+    }
+
+    // 5️⃣ **Retry logic for Supabase Schema Cache issues**
+    let updateAttempts = 3;
+    while (updateAttempts > 0) {
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({ [lastAttendanceColumn]: true })
+        .eq('student_email', student_email);
+
+      if (!updateError) {
+        console.log("✅ Attendance marked successfully!");
+        break; // Exit loop if update is successful
+      } 
+
+      if (updateError.message.includes("does not exist")) {
+        console.warn("⚠️ Column not found in schema cache. Retrying...");
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds before retrying
+        updateAttempts--;
+      } else {
+        throw updateError; // Throw actual error if it's unrelated to schema cache
+      }
+    }
+
+    // 6️⃣ **Fetch updated data to confirm**
+    const { data: updatedData, error: fetchError } = await supabase
+      .from(tableName)
+      .select(lastAttendanceColumn)
+      .eq('student_email', student_email)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    console.log("🔄 Updated attendance data:", updatedData);
+  } catch (error) {
+    
+  }
+};
+
+  if (loading || !isLoaded) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007BFF" />
@@ -126,7 +197,6 @@ export default function CourseDetails() {
             <Text style={styles.instructor}>Instructor: {course.instructor || 'Unknown Instructor'}</Text>
             <Text style={styles.description}>{course.description}</Text>
 
-            {/* 🔹 Enroll / Join Course Button */}
             {userIdentity === 'student' ? (
               <TouchableOpacity style={styles.button} onPress={handleMarkAttendance}>
                 <Text style={styles.buttonText}>Mark my attendance</Text>
@@ -141,10 +211,8 @@ export default function CourseDetails() {
           <Text style={styles.errorText}>Course not found.</Text>
         )}
 
-        {/* 🔹 Display Students Table by passing completables */}
-        <Sheet course={parmeters} />
-        <Export course={parmeters} />
-
+        <Sheet course={tableName} />
+        <Export course={tableName} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -183,24 +251,6 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginBottom: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  instructor: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#555',
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 15,
-    color: '#666',
-    marginBottom: 20,
-    lineHeight: 22,
-  },
   button: {
     backgroundColor: '#007BFF',
     paddingVertical: 12,
@@ -213,9 +263,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  errorText: {
-    textAlign: 'center',
-    fontSize: 18,
-    color: 'red',
-  },
 });
+
