@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { supabase } from '../../supabaseConfig';
 
-const Sheet = ({ course }) => {
+const Sheet = ({ course, refreshTrigger }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,7 +39,7 @@ const Sheet = ({ course }) => {
 
   useEffect(() => {
     fetchTableData();
-  }, [course]);
+  }, [course, refreshTrigger]); // Re-fetch data when course or refreshTrigger changes
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

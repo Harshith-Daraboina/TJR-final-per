@@ -1,155 +1,126 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import * as Location from 'expo-location';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import React from 'react';
 
-export default function LiveLocationTracker() {
-  const [userLocation, setUserLocation] = useState(null);
-  const [isInsideRoom, setIsInsideRoom] = useState(null);
-
-  // Room Coordinates (Rectangle) & Altitude Range
-  const roomCoords = [
-    { latitude: 15.4007844, longitude: 75.0258996 }, // Bottom-left
-    { latitude: 15.4002653, longitude: 75.0158310  }, // Bottom-right
-    { latitude: 15.3897100, longitude: 75.0167238 }, // Top-right
-    { latitude: 15.3856518, longitude: 75.0246933 }, // Top-left
-  ];
-
-  const minAltitude = 500;  // Ground level
-  const maxAltitude = 750; // Maximum height of the room in meters
-
-  // Function to check if the user is inside the room including altitude check
-  const isUserInRoom = (userLocation, roomCoords) => {
-    if (!userLocation) return false;
-
-    const latitudes = roomCoords.map(coord => coord.latitude);
-    const longitudes = roomCoords.map(coord => coord.longitude);
-
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-
-    return (
-      userLocation.latitude >= minLat &&
-      userLocation.latitude <= maxLat &&
-      userLocation.longitude >= minLng &&
-      userLocation.longitude <= maxLng &&
-      userLocation.altitude >= minAltitude &&
-      userLocation.altitude <= maxAltitude
-    );
-  };
-
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Permission Denied');
-        return;
-      }
-
-      // Start tracking location with a 2-second update interval
-      const locationSubscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 2000,  // Update every 2 seconds
-          distanceInterval: 0.5, // Update on small movements
-        },
-        (location) => {
-          const newLocation = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            altitude: location.coords.altitude || 0, // Use 0 if altitude is unavailable
-          };
-
-          setUserLocation(newLocation);
-
-          const insideRoom = isUserInRoom(newLocation, roomCoords);
-          setIsInsideRoom(insideRoom);
-        }
-      );
-
-      return () => {
-        if (locationSubscription) {
-          locationSubscription.remove();
-        }
-      };
-    })();
-  }, []);
-
+export default function PolicyPage() {
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
-          Live Location Tracker
-        </Text>
-        {userLocation ? (
-          <>
-            <Text style={styles.text} numberOfLines={1} >
-              Latitude: {userLocation.latitude.toFixed(6)}
-            </Text>
-            <Text style={styles.text} numberOfLines={1} >
-              Longitude: {userLocation.longitude.toFixed(6)}
-            </Text>
-            <Text style={styles.text} numberOfLines={1} >
-              Altitude: {userLocation.altitude.toFixed(2)} m
-            </Text>
-            <Text
-              style={[styles.statusText, { color: isInsideRoom ? 'green' : 'red' }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {isInsideRoom ? '✅ Inside Room' : '❌ Outside Room'}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.loadingText} numberOfLines={1} adjustsFontSizeToFit>
-            Getting location...
+    <SafeAreaView style={styles.safeContainer}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Privacy Policy</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>1. Introduction</Text>
+          <Text style={styles.text}>
+            Welcome to our application. This Privacy Policy outlines how we collect, use, and safeguard your personal information. 
+            Our team, <Text style={styles.bold}>T-J-R</Text>, is committed to ensuring a secure and seamless experience for all users.
           </Text>
-        )}
-      </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>2. Data Collection & Usage</Text>
+          <Text style={styles.text}>
+            Our app may collect location data to improve functionality and user experience. We do not share your data with third parties, 
+            and all collected information is used solely to enhance app services.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>3. Security Measures</Text>
+          <Text style={styles.text}>
+            We implement industry-standard security protocols to protect your data. However, we encourage users to maintain strong passwords 
+            and avoid sharing sensitive information over unsecured networks.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>4. User Rights & Data Control</Text>
+          <Text style={styles.text}>
+            You have full control over your personal data. Users can request data deletion or modifications at any time by reaching out 
+            to our support team.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>5. Contact Information</Text>
+          <Text style={styles.text}>
+            For inquiries or concerns regarding privacy, please contact our <Text style={styles.bold}>T-J-R</Text> team members:
+          </Text>
+          <Text style={styles.teamList}>
+            @ Harshith (Aka A) {"\n"}
+            @ Arunodaya (Chitti) {"\n"}
+            @ Varshith (VBro) {"\n"}
+            @ Om Sai Chand (Python) {"\n"}
+          </Text>
+        </View>
+
+        <Text style={styles.footer}>© 2024 T-J-R Team. All rights reserved.</Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-// Styles
 const styles = StyleSheet.create({
-  safeArea: {
+  safeContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f4f5f7',
   },
   container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: '#f5f5f5',
-    textAlign: 'left',
-   
+    padding: 20,
+    backgroundColor: '#ffffff',
+    margin: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 20,
     textAlign: 'center',
-    flexWrap: 'wrap',
+    color: '#222',
+    marginBottom: 20,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 8,
   },
   text: {
-    fontSize: 18,
-    marginVertical: 5,
-    textAlign: 'center',
-    flexWrap: 'wrap',
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 22,
   },
-  statusText: {
-    fontSize: 22,
+  bold: {
     fontWeight: 'bold',
-    marginTop: 20,
-    textAlign: 'center',
-    flexWrap: 'wrap',
+    color: '#007AFF',
   },
-  loadingText: {
-    fontSize: 18,
-    color: 'gray',
+  teamList: {
+    fontSize: 16,
+    color: '#444',
+    fontWeight: 'bold',
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  footer: {
+    fontSize: 14,
     textAlign: 'center',
-    flexWrap: 'wrap',
+    color: '#666',
+    marginTop: 20,
+    fontWeight: 'bold',
   },
 });

@@ -1,126 +1,115 @@
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import * as Location from 'expo-location';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import React from 'react';
 
-export default function Info() {
-  const [locationHistory, setLocationHistory] = useState([]); // Stores all locations
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let locationSubscription;
-
-    const startLocationTracking = async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(false);
-
-      locationSubscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.BestForNavigation, // Highest possible accuracy
-          timeInterval: 500, // 500ms buffer for updates
-          distanceInterval: 0.1, // Update on small movements (10 cm)
-        },
-        (newLocation) => {
-          setLocationHistory((prevHistory) => [
-            ...prevHistory, 
-            {
-              latitude: newLocation.coords.latitude,
-              longitude: newLocation.coords.longitude,
-              accuracy: newLocation.coords.accuracy, // Store accuracy
-              timestamp: new Date().toLocaleTimeString(),
-            },
-          ]);
-        }
-      );
-    };
-
-    startLocationTracking();
-
-    return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
-    };
-  }, []);
-
+export default function TeamTalks() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Live Location Tracker</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#007BFF" />
-      ) : errorMsg ? (
-        <Text style={styles.errorText}>{errorMsg}</Text>
-      ) : (
-        <ScrollView style={styles.listContainer}>
-          {locationHistory.length === 0 ? (
-            <Text style={styles.noDataText}>Waiting for location updates...</Text>
-          ) : (
-            locationHistory.map((location, index) => (
-              <View key={index} style={styles.locationItem}>
-                <Text style={styles.text}>
-                  {index + 1}. Lat: {location.latitude}, Lng: {location.longitude}
-                </Text>
-                <Text style={styles.text}>🎯 Accuracy: ±{location.accuracy} meters</Text>
-                <Text style={styles.timestamp}>⏱ {location.timestamp}</Text>
-              </View>
-            ))
-          )}
-        </ScrollView>
-      )}
-    </View>
+    <SafeAreaView style={styles.safeContainer}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Team Talks</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Welcome to Team Talks</Text>
+          <Text style={styles.text}>
+            This is a dedicated space for discussions, brainstorming, and collaboration among T-J-R team members. 
+            Share ideas, updates, and insights to enhance our projects.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Discussion Topics</Text>
+          <Text style={styles.text}>
+            * Project Updates {"\n"}
+            * New Ideas & Features {"\n"}
+            * Technical Challenges & Solutions {"\n"}
+            * Announcements & Important News
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Guidelines for Effective Discussions</Text>
+          <Text style={styles.text}>
+            ✅ Stay on topic and be clear in your messages. {"\n"}
+            ✅ Respect all team members and their ideas. {"\n"}
+            ✅ Use constructive criticism and provide solutions. {"\n"}
+            ✅ Keep discussions professional and productive.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Meet the Team</Text>
+          <Text style={styles.teamList}>
+            * Harshith (Aka A) {"\n"}
+            * Arunodaya (Chitti) {"\n"}
+            * Varshith (VBro) {"\n"}
+            * Om Sai Chand (Python) {"\n"}
+          </Text>
+        </View>
+
+        <Text style={styles.footer}>© 2024 T-J-R Team. All rights reserved.</Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#f4f5f7',
+  },
+  container: {
     padding: 20,
+    backgroundColor: '#ffffff',
+    margin: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#222',
     marginBottom: 20,
   },
-  listContainer: {
-    width: '100%',
-    maxHeight: 400,
-    borderWidth: 1,
-    borderColor: '#ccc',
+  card: {
+    backgroundColor: '#ffffff',
+    padding: 15,
     borderRadius: 10,
-    padding: 10,
-    backgroundColor: '#fff',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
   },
-  locationItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 8,
   },
   text: {
     fontSize: 16,
     color: '#333',
+    lineHeight: 22,
   },
-  timestamp: {
+  teamList: {
+    fontSize: 16,
+    color: '#444',
+    fontWeight: 'bold',
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  footer: {
     fontSize: 14,
-    color: '#777',
-  },
-  errorText: {
-    fontSize: 16,
-    color: 'red',
     textAlign: 'center',
-  },
-  noDataText: {
-    fontSize: 16,
-    color: '#777',
-    textAlign: 'center',
+    color: '#666',
+    marginTop: 20,
+    fontWeight: 'bold',
   },
 });

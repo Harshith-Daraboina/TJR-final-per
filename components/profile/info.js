@@ -10,7 +10,14 @@ export default function Info() {
     <View style={styles.container}>
       <TouchableOpacity 
         style={styles.actionButton} 
-        onPress={() => router.push('/info/info')}
+        onPress={() => router.push('/checkLoaction/checkLoc')}
+      >
+        <Text style={styles.buttonText}>Check Location</Text>
+        <Feather name="chevron-right" size={20} color="#333" />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.actionButton} 
+        onPress={() => router.push('/teamtalk/info2')}
       >
         <Text style={styles.buttonText}>App Policies</Text>
         <Feather name="chevron-right" size={20} color="#333" />
@@ -18,7 +25,7 @@ export default function Info() {
 
       <TouchableOpacity 
         style={styles.actionButton}  
-        onPress={() => router.push('/teamtalk/info2')}
+        onPress={() => router.push('/info/info')}
       >
         <Text style={styles.buttonText}>Team Talks!</Text>
         <Feather name="chevron-right" size={20} color="#333" />
